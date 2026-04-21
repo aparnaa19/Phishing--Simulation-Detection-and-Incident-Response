@@ -107,7 +107,7 @@ Reviewing the results within the timeframe of the alert, the following sequence 
 
 **The key red flag:** `explorer.exe` spawning `cmd.exe`. Under normal circumstances, a user opening a document or file does not result in a command prompt being launched. This single relationship was the entry point of the entire investigation.
 
-![detectionreport](screenshots/detectionreport.png)
+![detectionreport](../screenshots/detectionreport.png)
 
 ---
 
@@ -135,10 +135,10 @@ WindowsUpdater    REG_SZ    C:\Users\theep\invoice_report.bat
 
 The entry name `WindowsUpdater` was deliberately chosen to blend in with legitimate startup entries such as OneDrive, Spotify, and Discord - a masquerading technique. The malicious entry was only identified by cross-referencing each startup value against known legitimate software.
 
-![persistances](screenshots/persistance.png)  
+![persistances](../screenshots/persistance.png)  
 
 
-![persistancereport](screenshots/persistancereport.png)
+![persistancereport](../screenshots/persistancereport.png)
 
 ---
 
@@ -167,9 +167,9 @@ The phishing email that triggered the attack was retrieved from the victim mailb
 | SCL Score | 1 | Email bypassed spam filters despite failures |
 | Originating Server | Blacklisted | Server has known bad reputation |
 
-![1](screenshots/deliveryandrelayinfo.png)
-![2](screenshots/1.png)
-![3](screenshots/2.png)
+![1](../screenshots/deliveryandrelayinfo.png)
+![2](../screenshots/1.png)
+![3](../screenshots/2.png)
 
 Despite failing all three authentication checks, the email was delivered successfully because both sender and recipient were on the same Outlook tenant - treated as internal mail. The subdomain `hawk.illinoistech.edu` had no DMARC record configured, leaving it without spoofing protection.
 
@@ -182,7 +182,7 @@ d8d89dba02219e4d3014a0fa4bdf9e671e2891b95cbf0d4381d595f9c02d06d8
 
 VirusTotal returned zero detections across all antivirus engines - confirming the payload was custom-built and had no prior signatures. This means traditional antivirus provided no protection in this scenario. Behavioral detection through Splunk was the only effective control.
 
-![virustotal](screenshots/virustotal.png)
+![virustotal](../screenshots/virustotal.png)
 
 ---
 
