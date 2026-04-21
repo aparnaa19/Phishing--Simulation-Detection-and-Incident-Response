@@ -51,27 +51,34 @@ Detection was performed entirely through behavioral analysis — hunting for sus
 | Windows 11 | Victim machine |
 
 ---
+```mermaid
+graph LR
+subgraph Attacker["Ubuntu VM (Attacker) — 192.168.0.24"]
+A2["- netcat"]
+A3["- payload craft"]
+end
+subgraph Victim["Windows Laptop (Victim) — 192.168.0.14"]
+    V1["- Splunk"]
+    V2["- Event Viewer"]
+    V3["- Outlook"]
+end
 
-## Lab Setup
-┌─────────────────────┐         Bridged Network        ┌─────────────────────┐
-│   Ubuntu VM         │◄──────────────────────────────►│   Windows Laptop    │
-│   (Attacker)        │                                 │   (Victim)          │
-│   192.168.0.24      │                                 │   192.168.0.14      │
-│                     │                                 │                     │
-│   - swaks           │                                 │   - Splunk          │
-│   - netcat          │                                 │   - Event Viewer    │
-│   - payload craft   │                                 │   - Outlook         │
-└─────────────────────┘                                 └─────────────────────┘
-
+Attacker <-->|Bridged Network| Victim
+```
 ---
 
 ## Attack Flow (Cyber Kill Chain)
 
 Delivery       →  Phishing email with password-protected zip attachment
+
 Execution      →  Victim runs invoice_report.bat → cmd.exe spawned
+
 Recon          →  whoami, systeminfo, ipconfig, net user, net localgroup
-Persistence    →  Registry Run key added (WindowsUpdater) — masquerading
+
+Persistence    →  Registry Run key added (WindowsUpdater) - masquerading
+
 C2             →  PowerShell reverse TCP connection to 192.168.0.24:4444
+
 Exfiltration   →  System data transmitted to attacker over C2 channel
 
 
@@ -88,24 +95,23 @@ Exfiltration   →  System data transmitted to attacker over C2 channel
 
 ---
 
-## Project Structure
-
+```
 phishing-simulation-detection-ir/
-│
 ├── README.md
 │
 ├── docs/
-│   ├── 01-simulation.md          ← How the attack was built and delivered
-│   ├── 02-detection.md           ← How the attack was detected and investigated
-│   └── 03-incident-report.md     ← Full SOC-style incident report
+│   ├── 01-simulation.md         ← How the attack was built and delivered
+│   ├── 02-detection.md          ← How the attack was detected and investigated
+│   └── 03-incident-report.md   ← Full SOC-style incident report
 │
-├── screenshots/                  ← All evidence screenshots referenced in docs
+├── screenshots/                 ← All evidence screenshots referenced in docs
 │
 ├── payloads/
-│   └── invoice_report.bat        ← Simulated malicious payload
+│   └── invoice_report.bat       ← Simulated malicious payload
 │
 └── splunk-queries/
-└── queries.md                ← All SPL queries used during investigation
+└── queries.md               ← All SPL queries used during investigation
+```
 
 ---
 
